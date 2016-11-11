@@ -107,7 +107,12 @@ class Frame:
         """
         child = Frame(self) # Create a new child with self as the parent
         # BEGIN PROBLEM 11
-        "*** REPLACE THIS LINE ***"
+        if len(formals) == len(vals):
+            while formals:
+                child.define(formals.first, vals.first)
+                formals, vals = formals.second, vals.second
+        else:
+            raise SchemeError
         # END PROBLEM 11
         return child
 
