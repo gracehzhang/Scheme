@@ -317,7 +317,22 @@ def make_let_frame(bindings, env):
     if not scheme_listp(bindings):
         raise SchemeError('bad bindings list in let form')
     # BEGIN PROBLEM 15
-    "*** REPLACE THIS LINE ***"
+    def pair_append(p, value):
+        if p.first == nil:
+            p.first = value
+        elif p.second == nil:
+            p.second = Pair(value, nil)
+        else:
+            pair_append(p.second, value)
+    formals = Pair(nil, nil)
+    vals = Pair(nil, nil)
+    while bindings is not nil:
+        check_form(bindings.first, 2, 2)
+        pair_append(formals, bindings.first.first)
+        pair_append(vals, scheme_eval(bindings.first.second.first, env))
+        bindings = bindings.second
+    check_formals(formals)
+    return env.make_child_frame(formals, vals)
     # END PROBLEM 15
 
 SPECIAL_FORMS = {
