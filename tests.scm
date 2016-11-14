@@ -10,6 +10,36 @@
 ;;; *** Add more of your own here! ***
 ;;; **********************************
 
+(odd? 5)
+; expect True
+
+(+ (* 2 3) 5 (/ 3 1))
+; expect 14
+
+(define x 'test)
+; expect x
+
+x
+; expect test
+
+(and False (/ 1 0))
+; expect False
+
+(cond (False 'hi) ((= 4 4) 'bye 'banana))
+; expect banana
+
+(let ((x 2) (y x)) (+ x y))
+; expect Error
+
+(define f (lambda (x) (+ x 2)))
+; expect f
+
+(f 3)
+; expect 5
+
+(f (cons 1 2))
+; expect Error
+
 ;;; These are examples from several sections of "The Structure
 ;;; and Interpretation of Computer Programs" by Abelson and Sussman.
 
