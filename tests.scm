@@ -40,6 +40,45 @@ x
 (f (cons 1 2))
 ; expect Error
 
+(define (f x y z) (* x y z))
+(f 2 3 4)
+; expect 24
+
+(quote (1 2 . 3))
+; expect (1 2 . 3)
+
+'(2 . (6 . 7))
+; expect (2 6 . 7)
+
+(begin (* 773 467) (+ 1 1))
+; expect 2
+
+(define f (lambda (x) (+ 8 (* 6 x))))
+; expect f
+
+(and (+ 2 3) 8)
+; expect 8
+
+(or 0 (1 / 0))
+; expect 0
+
+(cond
+  ((= 5 5) 'hi)
+  ((= 0 2) 'no)
+  (else (1 / 0))
+)
+; expect hi
+
+(cond
+  ((= 5 4) 'hi)
+  ((= 0 2) 'no)
+  (else (1 / 0))
+)
+; expect Error
+
+(begin (+ 6 7) (* 5 4))
+; expect 20
+
 ;;; These are examples from several sections of "The Structure
 ;;; and Interpretation of Computer Programs" by Abelson and Sussman.
 
