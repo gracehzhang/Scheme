@@ -11,7 +11,12 @@
   'replace-this-line)
 
 (define (zip pairs)
-  'replace-this-line)
+  (if (null? pairs) '(() ())
+    (cons (cons (caar pairs) (car (zip (cdr pairs)))) 
+      (list (cons (car (cdar pairs)) (car (cdr (zip (cdr pairs))))))
+      )
+  )
+)
 
 ;; Problem 17
 ;; Returns a list of two-element lists
