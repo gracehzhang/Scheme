@@ -50,13 +50,13 @@ def scheme_apply(procedure, args, env):
 def eval_all(expressions, env):
     """Evaluate a Scheme list of EXPRESSIONS & return the value of the last."""
     # BEGIN PROBLEM 8
-    if expressions == nil:
+    if expressions is nil:
         return None
-    if expressions.second:
+    elif expressions.second is not nil:
         scheme_eval(expressions.first, env)
         return eval_all(expressions.second, env)
     else:
-        return scheme_eval(expressions.first, env)
+        return scheme_eval(expressions.first, env, True)
     # END PROBLEM 8
 
 ################
@@ -211,41 +211,39 @@ def add_primitives(frame, funcs_and_names):
 # initial identifying symbol (if, lambda, quote, ...). Its second argument is
 # the environment in which the form is to be evaluated.
 
-def do_define_form(expressions, env):
+def do_define_form(expressions, env, _=False):
     """Evaluate a define form."""
     check_form(expressions, 2)
     target = expressions.first
     if scheme_symbolp(target):
         check_form(expressions, 2, 2)
         # BEGIN PROBLEM 6
-        symbol = expressions.first
-        value = scheme_eval(expressions.second.first, env)
-        env.define(symbol, value)
-        return symbol
+        env.define(expressions.first, scheme_eval(expressions.second.first,env))
+        return expressions.first
         # END PROBLEM 6
     elif isinstance(target, Pair) and scheme_symbolp(target.first):
         # BEGIN PROBLEM 10
-        body = do_lambda_form(Pair(target.second, expressions.second), env)
-        env.define(target.first, body)
+        proc = do_lambda_form(Pair(target.second, expressions.second),env)
+        env.define(target.first, proc)
         return target.first
         # END PROBLEM 10
     else:
         bad_target = target.first if isinstance(target, Pair) else target
         raise SchemeError('non-symbol: {0}'.format(bad_target))
 
-def do_quote_form(expressions, env):
+def do_quote_form(expressions, env, _=False):
     """Evaluate a quote form."""
     check_form(expressions, 1, 1)
     # BEGIN PROBLEM 7
     return expressions.first
     # END PROBLEM 7
 
-def do_begin_form(expressions, env):
+def do_begin_form(expressions, env, _=False):
     """Evaluate begin form."""
     check_form(expressions, 1)
     return eval_all(expressions, env)
 
-def do_lambda_form(expressions, env):
+def do_lambda_form(expressions, env, _=False):
     """Evaluate a lambda form."""
     check_form(expressions, 2)
     formals = expressions.first
@@ -254,15 +252,15 @@ def do_lambda_form(expressions, env):
     return LambdaProcedure(expressions.first, expressions.second, env)
     # END PROBLEM 9
 
-def do_if_form(expressions, env):
+def do_if_form(expressions, env, tail=False):
     """Evaluate an if form."""
     check_form(expressions, 2, 3)
     if scheme_truep(scheme_eval(expressions.first, env)):
         return scheme_eval(expressions.second.first, env)
     elif len(expressions) == 3:
-        return scheme_eval(expressions.second.second.first, env)
+        return scheme_eval(expressions.second.second.first, env, tail)
 
-def do_and_form(expressions, env):
+def do_and_form(expressions, env, _=False):
     """Evaluate a short-circuited and form."""
     # BEGIN PROBLEM 13
     if expressions is nil:
@@ -274,19 +272,21 @@ def do_and_form(expressions, env):
         return do_and_form(expressions.second, env)
     # END PROBLEM 13
 
-def do_or_form(expressions, env):
+def do_or_form(expressions, env, tail=False):
     """Evaluate a short-circuited or form."""
     # BEGIN PROBLEM 13
     if expressions is nil:
         return False
+    if expressions.second is nil:
+        return scheme_eval(expressions.first,env,tail)
     x = scheme_eval(expressions.first,env)
-    if expressions.second is nil or scheme_truep(x):
+    if scheme_truep(x):
         return x
     else:
-        return do_or_form(expressions.second, env)
+        return do_or_form(expressions.second, env, tail)
     # END PROBLEM 13
 
-def do_cond_form(expressions, env):
+def do_cond_form(expressions, env, _=False):
     """Evaluate a cond form."""
     while expressions is not nil:
         clause = expressions.first
@@ -299,11 +299,13 @@ def do_cond_form(expressions, env):
             test = scheme_eval(clause.first, env)
         if scheme_truep(test):
             # BEGIN PROBLEM 14
-            "*** REPLACE THIS LINE ***"
+            if clause.second:
+                return eval_all(clause.second, env)
+            return test
             # END PROBLEM 14
         expressions = expressions.second
 
-def do_let_form(expressions, env):
+def do_let_form(expressions, env, _=False):
     """Evaluate a let form."""
     check_form(expressions, 2)
     let_env = make_let_frame(expressions.first, env)
@@ -317,23 +319,25 @@ def make_let_frame(bindings, env):
     if not scheme_listp(bindings):
         raise SchemeError('bad bindings list in let form')
     # BEGIN PROBLEM 15
-    def pair_append(p, value):
-        if p.first == nil:
-            p.first = value
-        elif p.second == nil:
-            p.second = Pair(value, nil)
+    def append(pair, val):
+        if pair.first is nil:
+            pair.first = val
+        elif pair.second is nil:
+            pair.second = Pair(val, nil)
         else:
-            pair_append(p.second, value)
-    formals = Pair(nil, nil)
-    vals = Pair(nil, nil)
-    while bindings is not nil:
-        check_form(bindings.first, 2, 2)
-        pair_append(formals, bindings.first.first)
-        pair_append(vals, scheme_eval(bindings.first.second.first, env))
+            append(pair.second,val)
+
+    formals, vals = Pair(nil,nil), Pair(nil,nil)
+    while bindings:
+        check_form(bindings.first,2,2)
+        append(formals, bindings.first.first)
+        append(vals, scheme_eval(bindings.first.second.first,env))
         bindings = bindings.second
     check_formals(formals)
-    return env.make_child_frame(formals, vals)
+    return env.make_child_frame(formals,vals)
     # END PROBLEM 15
+
+
 
 SPECIAL_FORMS = {
     'and': do_and_form,
@@ -422,7 +426,7 @@ class MuProcedure(UserDefinedProcedure):
         return 'MuProcedure({0}, {1})'.format(
             repr(self.formals), repr(self.body))
 
-def do_mu_form(expressions, env):
+def do_mu_form(expressions, env, _=False):
     """Evaluate a mu form."""
     check_form(expressions, 2)
     formals = expressions.first
@@ -498,7 +502,7 @@ def scheme_optimized_eval(expr, env, tail=False):
 
     if tail:
         # BEGIN Extra Credit
-        "*** REPLACE THIS LINE ***"
+        return Thunk(expr, env)
         # END Extra Credit
     else:
         result = Thunk(expr, env)
@@ -510,17 +514,20 @@ def scheme_optimized_eval(expr, env, tail=False):
             raise SchemeError('malformed list: {0}'.format(str(expr)))
         first, rest = expr.first, expr.second
         if (scheme_symbolp(first) and first in SPECIAL_FORMS):
-            result = SPECIAL_FORMS[first](rest, env)
+            result = SPECIAL_FORMS[first](rest, env, True)
         else:
             # BEGIN Extra Credit
-            "*** REPLACE THIS LINE ***"
+            operator = scheme_eval(expr.first,env)
+            check_procedure(operator)
+            operands = expr.second.map(lambda x: scheme_eval(x,env))
+            result = scheme_apply(operator, operands, env)
             # END Extra Credit
     return result
 
 ################################################################
 # Uncomment the following line to apply tail call optimization #
 ################################################################
-# scheme_eval = scheme_optimized_eval
+scheme_eval = scheme_optimized_eval
 
 
 ################
